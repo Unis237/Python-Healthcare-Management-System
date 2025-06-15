@@ -4,6 +4,7 @@ import database as db
 import pandas as pd
 import patient
 import doctor
+import utils
 
 # Utility functions
 def verify_prescription_id(prescription_id):
@@ -12,6 +13,7 @@ def verify_prescription_id(prescription_id):
         c.execute("SELECT id FROM prescription_record WHERE id = %(id)s", {'id': prescription_id})
         return c.fetchone() is not None
     finally:
+        c.close()
         conn.close()
 
 def show_prescription_details(prescriptions):
@@ -39,6 +41,7 @@ def get_name_by_id(table, user_id):
         result = c.fetchone()
         return result[0] if result else None
     finally:
+        c.close()
         conn.close()
 
 # Class definition
@@ -63,18 +66,18 @@ class Prescription:
         self.medicine_3_dosage_description = None
 
     def input_prescription_fields(self, update=False):
-        self.diagnosis = st.text_area('Diagnosis')
-        self.comments = st.text_area('Comments (if any)') or None
-        self.medicine_1_name = st.text_input('Medicine 1 name')
-        self.medicine_1_dosage_description = st.text_area('Medicine 1 dosage and description')
-        self.medicine_2_name = st.text_input('Medicine 2 name (optional)') or None
-        self.medicine_2_dosage_description = st.text_area('Medicine 2 dosage and description') or None
-        self.medicine_3_name = st.text_input('Medicine 3 name (optional)') or None
-        self.medicine_3_dosage_description = st.text_area('Medicine 3 dosage and description') or None
+        self.diagnosis = utils.sanitize_text_input(st.text_area('Diagnosis'))
+        self.comments = utils.sanitize_text_input(st.text_area('Comments (if any)')) or None
+        self.medicine_1_name = utils.sanitize_text_input(st.text_input('Medicine 1 name'))
+        self.medicine_1_dosage_description = utils.sanitize_text_input(st.text_area('Medicine 1 dosage and description'))
+        self.medicine_2_name = utils.sanitize_text_input(st.text_input('Medicine 2 name (optional)')) or None
+        self.medicine_2_dosage_description = utils.sanitize_text_input(st.text_area('Medicine 2 dosage and description')) or None
+        self.medicine_3_name = utils.sanitize_text_input(st.text_input('Medicine 3 name (optional)')) or None
+        self.medicine_3_dosage_description = utils.sanitize_text_input(st.text_area('Medicine 3 dosage and description')) or None
 
     def add_prescription(self):
         st.subheader('Enter prescription details:')
-        self.patient_id = st.text_input('Patient ID')
+        self.patient_id = utils.sanitize_text_input(st.text_input('Patient ID'))
         if self.patient_id and not patient.verify_patient_id(self.patient_id):
             st.error('Invalid Patient ID.')
             return
@@ -82,7 +85,7 @@ class Prescription:
             self.patient_name = get_name_by_id("patient_record", self.patient_id)
             st.success(f"Patient verified: {self.patient_name}")
 
-        self.doctor_id = st.text_input('Doctor ID')
+        self.doctor_id = utils.sanitize_text_input(st.text_input('Doctor ID'))
         if self.doctor_id and not doctor.verify_doctor_id(self.doctor_id):
             st.error('Invalid Doctor ID.')
             return
@@ -94,8 +97,8 @@ class Prescription:
         self.id = generate_prescription_id()
 
         if st.button('Save'):
-            conn, c = db.connection()
             try:
+                conn, c = db.connection()
                 c.execute("""
                     INSERT INTO prescription_record (
                         id, patient_id, patient_name, doctor_id, doctor_name,
@@ -117,11 +120,13 @@ class Prescription:
                 })
                 conn.commit()
                 st.success(f'Prescription saved. ID: {self.id}')
+            except Exception as e:
+                st.error(f'Error saving prescription details: {e}')
             finally:
                 conn.close()
 
     def update_prescription(self):
-        id = st.text_input('Enter Prescription ID to update')
+        id = utils.sanitize_text_input(st.text_input('Enter Prescription ID to update'))
         if not id:
             return
         if not verify_prescription_id(id):
@@ -129,8 +134,8 @@ class Prescription:
             return
 
         st.success('Verified')
-        conn, c = db.connection()
         try:
+            conn, c = db.connection()
             c.execute("SELECT * FROM prescription_record WHERE id = %(id)s", {'id': id})
             st.write('Current details:')
             show_prescription_details(c.fetchall())
@@ -154,11 +159,13 @@ class Prescription:
                 })
                 conn.commit()
                 st.success('Prescription updated successfully.')
+        except Exception as e:
+            st.error(f'Error updating prescription details: {e}')
         finally:
             conn.close()
 
     def delete_prescription(self):
-        id = st.text_input('Enter Prescription ID to delete')
+        id = utils.sanitize_text_input(st.text_input('Enter Prescription ID to delete'))
         if not id:
             return
         if not verify_prescription_id(id):
@@ -166,8 +173,8 @@ class Prescription:
             return
 
         st.success('Verified')
-        conn, c = db.connection()
         try:
+            conn, c = db.connection()
             c.execute("SELECT * FROM prescription_record WHERE id = %(id)s", {'id': id})
             st.write('Prescription to be deleted:')
             show_prescription_details(c.fetchall())
@@ -176,11 +183,13 @@ class Prescription:
                 c.execute("DELETE FROM prescription_record WHERE id = %(id)s", {'id': id})
                 conn.commit()
                 st.success('Prescription deleted successfully.')
+        except Exception as e:
+            st.error(f'Error deleting prescription details: {e}')
         finally:
             conn.close()
 
     def prescriptions_by_patient(self):
-        patient_id = st.text_input('Enter Patient ID')
+        patient_id = utils.sanitize_text_input(st.text_input('Enter Patient ID'))
         if not patient_id:
             return
         if not patient.verify_patient_id(patient_id):
@@ -188,11 +197,13 @@ class Prescription:
             return
 
         st.success('Verified')
-        conn, c = db.connection()
         try:
+            conn, c = db.connection()
             c.execute("SELECT * FROM prescription_record WHERE patient_id = %(id)s", {'id': patient_id})
             prescriptions = c.fetchall()
             st.write(f'Prescriptions for {get_name_by_id("patient_record", patient_id)}:')
             show_prescription_details(prescriptions)
+        except Exception as e:
+            st.error(f'Error fetching prescription records: {e}')
         finally:
             conn.close()

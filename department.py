@@ -2,19 +2,22 @@ import streamlit as st
 from datetime import datetime
 import database as db
 import pandas as pd
+import utils
 
 # function to verify department id
 def verify_department_id(department_id):
     verify = False
     conn, c = db.connection()
-    with conn:
+    try:
         c.execute("SELECT id FROM department_record;")
         department_ids = c.fetchall()
+    finally:
+        c.close()
+        conn.close()
     for id in department_ids:
         if id[0] == department_id:
             verify = True
             break
-    conn.close()
     return verify
 
 # function to show the details of department(s) given in a list (provided as a parameter)
@@ -49,7 +52,7 @@ def show_list_of_doctors(list_of_doctors):
 # function to fetch department name from the database for the given department id
 def get_department_name(dept_id):
     conn, c = db.connection()
-    with conn:
+    try:
         c.execute(
             """
             SELECT name
@@ -59,7 +62,9 @@ def get_department_name(dept_id):
             {'id': dept_id}
         )
         result = c.fetchone()
-    conn.close()
+    finally:
+        c.close()
+        conn.close()
     return result[0] if result else 'Unknown'
 
 # class containing all the fields and methods required to work with the departments' table in the database
@@ -76,73 +81,110 @@ class Department:
 
     def add_department(self):
         st.write('Enter department details:')
-        self.name = st.text_input('Department name')
-        self.description = st.text_area('Description')
-        self.contact_number_1 = st.text_input('Contact number')
+        self.name = utils.sanitize_text_input(st.text_input('Department name'))
+        self.description = utils.sanitize_text_input(st.text_area('Description'))
+        self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
         contact_number_2 = st.text_input('Alternate contact number (optional)')
-        self.contact_number_2 = contact_number_2 if contact_number_2 else None
-        self.address = st.text_area('Address')
-        self.email_id = st.text_input('Email ID')
+        self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+        self.address = utils.sanitize_text_input(st.text_area('Address'))
+        self.email_id = utils.sanitize_text_input(st.text_input('Email ID'))
+
+        # Validate email and phone numbers
+        valid_email = utils.validate_email(self.email_id)
+        valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+        valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+        if not valid_email:
+            st.error('Invalid email format.')
+            return
+        if not valid_phone_1:
+            st.error('Invalid contact number format.')
+            return
+        if self.contact_number_2 and not valid_phone_2:
+            st.error('Invalid alternate contact number format.')
+            return
+
         self.id = generate_department_id()
         save = st.button('Save')
 
         if save:
-            conn, c = db.connection()
-            with conn:
-                c.execute(
-                    """
-                    INSERT INTO department_record (
-                        id, name, description, contact_number_1, contact_number_2,
-                        address, email_id
+            try:
+                conn, c = db.connection()
+                with conn:
+                    c.execute(
+                        """
+                        INSERT INTO department_record (
+                            id, name, description, contact_number_1, contact_number_2,
+                            address, email_id
+                        )
+                        VALUES (
+                            %(id)s, %(name)s, %(desc)s, %(phone_1)s, %(phone_2)s, %(address)s, %(email_id)s
+                        );
+                        """,
+                        {
+                            'id': self.id, 'name': self.name, 'desc': self.description,
+                            'phone_1': self.contact_number_1,
+                            'phone_2': self.contact_number_2, 'address': self.address,
+                            'email_id': self.email_id
+                        }
                     )
-                    VALUES (
-                        %(id)s, %(name)s, %(desc)s, %(phone_1)s, %(phone_2)s, %(address)s, %(email_id)s
-                    );
-                    """,
-                    {
-                        'id': self.id, 'name': self.name, 'desc': self.description,
-                        'phone_1': self.contact_number_1,
-                        'phone_2': self.contact_number_2, 'address': self.address,
-                        'email_id': self.email_id
-                    }
-                )
-            st.success('Department details saved successfully.')
-            st.write('The Department ID is: ', self.id)
-            conn.close()
+                st.success('Department details saved successfully.')
+                st.write('The Department ID is: ', self.id)
+            except Exception as e:
+                st.error(f'Error saving department details: {e}')
+            finally:
+                c.close()
+                conn.close()
 
     def update_department(self):
-        id = st.text_input('Enter Department ID of the department to be updated')
+        id = utils.sanitize_text_input(st.text_input('Enter Department ID of the department to be updated'))
         if not id:
             return
         elif not verify_department_id(id):
             st.error('Invalid Department ID')
         else:
             st.success('Verified')
-            conn, c = db.connection()
-            with conn:
-                c.execute(
-                    """
-                    SELECT *
-                    FROM department_record
-                    WHERE id = %(id)s;
-                    """,
-                    {'id': id}
-                )
-                department_data = c.fetchall()
-            st.write('Here are the current details of the department:')
-            show_department_details(department_data)
-
-            st.write('Enter new details of the department:')
-            self.description = st.text_area('Description')
-            self.contact_number_1 = st.text_input('Contact number')
-            contact_number_2 = st.text_input('Alternate contact number (optional)')
-            self.contact_number_2 = contact_number_2 if contact_number_2 else None
-            self.address = st.text_area('Address')
-            self.email_id = st.text_input('Email ID')
-            update = st.button('Update')
-
-            if update:
+            try:
+                conn, c = db.connection()
                 with conn:
+                    c.execute(
+                        """
+                        SELECT *
+                        FROM department_record
+                        WHERE id = %(id)s;
+                        """,
+                        {'id': id}
+                    )
+                    department_data = c.fetchall()
+                st.write('Here are the current details of the department:')
+                show_department_details(department_data)
+
+                st.write('Enter new details of the department:')
+                self.description = utils.sanitize_text_input(st.text_area('Description'))
+                self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
+                contact_number_2 = st.text_input('Alternate contact number (optional)')
+                self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+                self.address = utils.sanitize_text_input(st.text_area('Address'))
+                self.email_id = utils.sanitize_text_input(st.text_input('Email ID'))
+
+                # Validate email and phone numbers
+                valid_email = utils.validate_email(self.email_id)
+                valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+                valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+                if not valid_email:
+                    st.error('Invalid email format.')
+                    return
+                if not valid_phone_1:
+                    st.error('Invalid contact number format.')
+                    return
+                if self.contact_number_2 and not valid_phone_2:
+                    st.error('Invalid alternate contact number format.')
+                    return
+
+                update = st.button('Update')
+
+                if update:
                     c.execute(
                         """
                         UPDATE department_record
@@ -160,7 +202,11 @@ class Department:
                             'address': self.address, 'email_id': self.email_id
                         }
                     )
-                st.success('Department details updated successfully.')
+                    st.success('Department details updated successfully.')
+            except Exception as e:
+                st.error(f'Error updating department details: {e}')
+            finally:
+                c.close()
                 conn.close()
 
     def delete_department(self):

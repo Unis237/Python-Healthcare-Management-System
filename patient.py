@@ -2,18 +2,21 @@ import streamlit as st
 from datetime import datetime, date
 import database as db
 import pandas as pd
+import utils
 
 # function to verify patient id
 def verify_patient_id(patient_id):
     verify = False
     conn, c = db.connection()
-    with conn:
+    try:
         c.execute("SELECT id FROM patient_record;")
         for id in c.fetchall():
             if id[0] == patient_id:
                 verify = True
                 break
-    conn.close()
+    finally:
+        c.close()
+        conn.close()
     return verify
 
 # function to generate unique patient id using current date and time
@@ -76,181 +79,223 @@ class Patient:
 
     def add_patient(self):
         st.write('Enter patient details:')
-        self.name = st.text_input('Full name')
+        self.name = utils.sanitize_text_input(st.text_input('Full name'))
         gender = st.radio('Gender', ['Female', 'Male', 'Other'])
         if gender == 'Other':
-            gender = st.text_input('Please mention')
+            gender = utils.sanitize_text_input(st.text_input('Please mention'))
         self.gender = gender
         dob = st.date_input('Date of birth (YYYY/MM/DD)')
         st.info('If the required date is not in the calendar, please type it in the box above.')
         self.date_of_birth = dob.strftime('%d-%m-%Y')
         self.age = calculate_age(dob)
-        self.blood_group = st.text_input('Blood group')
-        self.contact_number_1 = st.text_input('Contact number')
+        self.blood_group = utils.sanitize_text_input(st.text_input('Blood group'))
+        self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
         contact_number_2 = st.text_input('Alternate contact number (optional)')
-        self.contact_number_2 = (lambda phone: None if phone == '' else phone)(contact_number_2)
-        self.aadhar_or_voter_id = st.text_input('Aadhar ID / Voter ID')
+        self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('Aadhar ID / Voter ID'))
         self.weight = st.number_input('Weight (in kg)', value=0, min_value=0, max_value=400)
         self.height = st.number_input('Height (in cm)', value=0, min_value=0, max_value=275)
-        self.address = st.text_area('Address')
-        self.city = st.text_input('City')
-        self.state = st.text_input('State')
-        self.pin_code = st.text_input('PIN code')
-        self.next_of_kin_name = st.text_input("Next of kin's name")
-        self.next_of_kin_relation_to_patient = st.text_input("Next of kin's relation to patient")
-        self.next_of_kin_contact_number = st.text_input("Next of kin's contact number")
+        self.address = utils.sanitize_text_input(st.text_area('Address'))
+        self.city = utils.sanitize_text_input(st.text_input('City'))
+        self.state = utils.sanitize_text_input(st.text_input('State'))
+        self.pin_code = utils.sanitize_text_input(st.text_input('PIN code'))
+        self.next_of_kin_name = utils.sanitize_text_input(st.text_input("Next of kin's name"))
+        self.next_of_kin_relation_to_patient = utils.sanitize_text_input(st.text_input("Next of kin's relation to patient"))
+        self.next_of_kin_contact_number = utils.sanitize_text_input(st.text_input("Next of kin's contact number"))
         email_id = st.text_input('Email ID (optional)')
-        self.email_id = (lambda email: None if email == '' else email)(email_id)
+        self.email_id = utils.sanitize_text_input(email_id) if email_id else None
         self.date_of_registration = datetime.now().strftime('%d-%m-%Y')
         self.time_of_registration = datetime.now().strftime('%H:%M:%S')
         self.id = generate_patient_id(self.date_of_registration, self.time_of_registration)
+
+        # Validate email and phone numbers
+        valid_email = utils.validate_email(self.email_id)
+        valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+        valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+        if not valid_email:
+            st.error('Invalid email format.')
+            return
+        if not valid_phone_1:
+            st.error('Invalid contact number format.')
+            return
+        if self.contact_number_2 and not valid_phone_2:
+            st.error('Invalid alternate contact number format.')
+            return
+
         save = st.button('Save')
 
         if save:
-            conn, c = db.connection()
-            with conn:
-                c.execute(
-                    """
-                    INSERT INTO patient_record
-                    (
-                        id, name, age, gender, date_of_birth, blood_group,
-                        contact_number_1, contact_number_2, aadhar_or_voter_id,
-                        weight, height, address, city, state, pin_code,
-                        next_of_kin_name, next_of_kin_relation_to_patient,
-                        next_of_kin_contact_number, email_id,
-                        date_of_registration, time_of_registration
+            try:
+                conn, c = db.connection()
+                with conn:
+                    c.execute(
+                        """
+                        INSERT INTO patient_record
+                        (
+                            id, name, age, gender, date_of_birth, blood_group,
+                            contact_number_1, contact_number_2, aadhar_or_voter_id,
+                            weight, height, address, city, state, pin_code,
+                            next_of_kin_name, next_of_kin_relation_to_patient,
+                            next_of_kin_contact_number, email_id,
+                            date_of_registration, time_of_registration
+                        )
+                        VALUES (
+                            %(id)s, %(name)s, %(age)s, %(gender)s, %(dob)s, %(blood_group)s,
+                            %(phone_1)s, %(phone_2)s, %(uid)s, %(weight)s, %(height)s,
+                            %(address)s, %(city)s, %(state)s, %(pin)s,
+                            %(kin_name)s, %(kin_relation)s, %(kin_phone)s, %(email_id)s,
+                            %(reg_date)s, %(reg_time)s
+                        );
+                        """,
+                        {
+                            'id': self.id, 'name': self.name, 'age': self.age,
+                            'gender': self.gender, 'dob': self.date_of_birth,
+                            'blood_group': self.blood_group,
+                            'phone_1': self.contact_number_1,
+                            'phone_2': self.contact_number_2,
+                            'uid': self.aadhar_or_voter_id, 'weight': self.weight,
+                            'height': self.height, 'address': self.address,
+                            'city': self.city, 'state': self.state,
+                            'pin': self.pin_code, 'kin_name': self.next_of_kin_name,
+                            'kin_relation': self.next_of_kin_relation_to_patient,
+                            'kin_phone': self.next_of_kin_contact_number,
+                            'email_id': self.email_id,
+                            'reg_date': self.date_of_registration,
+                            'reg_time': self.time_of_registration
+                        }
                     )
-                    VALUES (
-                        %(id)s, %(name)s, %(age)s, %(gender)s, %(dob)s, %(blood_group)s,
-                        %(phone_1)s, %(phone_2)s, %(uid)s, %(weight)s, %(height)s,
-                        %(address)s, %(city)s, %(state)s, %(pin)s,
-                        %(kin_name)s, %(kin_relation)s, %(kin_phone)s, %(email_id)s,
-                        %(reg_date)s, %(reg_time)s
-                    );
-                    """,
-                    {
-                        'id': self.id, 'name': self.name, 'age': self.age,
-                        'gender': self.gender, 'dob': self.date_of_birth,
-                        'blood_group': self.blood_group,
-                        'phone_1': self.contact_number_1,
-                        'phone_2': self.contact_number_2,
-                        'uid': self.aadhar_or_voter_id, 'weight': self.weight,
-                        'height': self.height, 'address': self.address,
-                        'city': self.city, 'state': self.state,
-                        'pin': self.pin_code, 'kin_name': self.next_of_kin_name,
-                        'kin_relation': self.next_of_kin_relation_to_patient,
-                        'kin_phone': self.next_of_kin_contact_number,
-                        'email_id': self.email_id,
-                        'reg_date': self.date_of_registration,
-                        'reg_time': self.time_of_registration
-                    }
-                )
-            st.success('Patient details saved successfully.')
-            st.write('Your Patient ID is: ', self.id)
-            conn.close()
+                st.success('Patient details saved successfully.')
+                st.write('Your Patient ID is: ', self.id)
+            except Exception as e:
+                st.error(f'Error saving patient details: {e}')
+            finally:
+                c.close()
+                conn.close()
 
     def update_patient(self):
-        id = st.text_input('Enter Patient ID of the patient to be updated')
+        id = utils.sanitize_text_input(st.text_input('Enter Patient ID of the patient to be updated'))
         if id == '':
             st.empty()
         elif not verify_patient_id(id):
             st.error('Invalid Patient ID')
         else:
             st.success('Verified')
-            conn, c = db.connection()
+            try:
+                conn, c = db.connection()
 
-            with conn:
-                c.execute(
-                    """
-                    SELECT *
-                    FROM patient_record
-                    WHERE id = %(id)s;
-                    """,
-                    { 'id': id }
-                )
-                st.write('Here are the current details of the patient:')
-                show_patient_details(c.fetchall())
-
-            st.write('Enter new details of the patient:')
-            self.contact_number_1 = st.text_input('Contact number')
-            contact_number_2 = st.text_input('Alternate contact number (optional)')
-            self.contact_number_2 = (lambda phone: None if phone == '' else phone)(contact_number_2)
-            self.weight = st.number_input('Weight (in kg)', value=0, min_value=0, max_value=400)
-            self.height = st.number_input('Height (in cm)', value=0, min_value=0, max_value=275)
-            self.address = st.text_area('Address')
-            self.city = st.text_input('City')
-            self.state = st.text_input('State')
-            self.pin_code = st.text_input('PIN code')
-            self.next_of_kin_name = st.text_input("Next of kin's name")
-            self.next_of_kin_relation_to_patient = st.text_input("Next of kin's relation to patient")
-            self.next_of_kin_contact_number = st.text_input("Next of kin's contact number")
-            email_id = st.text_input('Email ID (optional)')
-            self.email_id = (lambda email: None if email == '' else email)(email_id)
-            update = st.button('Update')
-
-            if update:
                 with conn:
                     c.execute(
                         """
-                        SELECT date_of_birth
+                        SELECT *
                         FROM patient_record
                         WHERE id = %(id)s;
                         """,
                         { 'id': id }
                     )
-                    dob = [int(d) for d in c.fetchone()[0].split('-')[::-1]]
-                    dob = date(dob[0], dob[1], dob[2])
-                    self.age = calculate_age(dob)
+                    st.write('Here are the current details of the patient:')
+                    show_patient_details(c.fetchall())
 
-                with conn:
-                    c.execute(
-                        """
-                        UPDATE patient_record
-                        SET age = %(age)s, contact_number_1 = %(phone_1)s,
-                            contact_number_2 = %(phone_2)s, weight = %(weight)s,
-                            height = %(height)s, address = %(address)s, city = %(city)s,
-                            state = %(state)s, pin_code = %(pin)s, next_of_kin_name = %(kin_name)s,
-                            next_of_kin_relation_to_patient = %(kin_relation)s,
-                            next_of_kin_contact_number = %(kin_phone)s, email_id = %(email_id)s
-                        WHERE id = %(id)s;
-                        """,
-                        {
-                            'id': id, 'age': self.age,
-                            'phone_1': self.contact_number_1,
-                            'phone_2': self.contact_number_2,
-                            'weight': self.weight, 'height': self.height,
-                            'address': self.address, 'city': self.city,
-                            'state': self.state, 'pin': self.pin_code,
-                            'kin_name': self.next_of_kin_name,
-                            'kin_relation': self.next_of_kin_relation_to_patient,
-                            'kin_phone': self.next_of_kin_contact_number,
-                            'email_id': self.email_id
-                        }
-                    )
-                st.success('Patient details updated successfully.')
+                st.write('Enter new details of the patient:')
+                self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
+                contact_number_2 = st.text_input('Alternate contact number (optional)')
+                self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+                self.weight = st.number_input('Weight (in kg)', value=0, min_value=0, max_value=400)
+                self.height = st.number_input('Height (in cm)', value=0, min_value=0, max_value=275)
+                self.address = utils.sanitize_text_input(st.text_area('Address'))
+                self.city = utils.sanitize_text_input(st.text_input('City'))
+                self.state = utils.sanitize_text_input(st.text_input('State'))
+                self.pin_code = utils.sanitize_text_input(st.text_input('PIN code'))
+                self.next_of_kin_name = utils.sanitize_text_input(st.text_input("Next of kin's name"))
+                self.next_of_kin_relation_to_patient = utils.sanitize_text_input(st.text_input("Next of kin's relation to patient"))
+                self.next_of_kin_contact_number = utils.sanitize_text_input(st.text_input("Next of kin's contact number"))
+                self.email_id = utils.sanitize_text_input(st.text_input('Email ID (optional)'))
+
+                # Validate email and phone numbers
+                valid_email = utils.validate_email(self.email_id)
+                valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+                valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+                if not valid_email:
+                    st.error('Invalid email format.')
+                    return
+                if not valid_phone_1:
+                    st.error('Invalid contact number format.')
+                    return
+                if self.contact_number_2 and not valid_phone_2:
+                    st.error('Invalid alternate contact number format.')
+                    return
+
+                update = st.button('Update')
+
+                if update:
+                    with conn:
+                        c.execute(
+                            """
+                            SELECT date_of_birth
+                            FROM patient_record
+                            WHERE id = %(id)s;
+                            """,
+                            { 'id': id }
+                        )
+                        dob = [int(d) for d in c.fetchone()[0].split('-')[::-1]]
+                        dob = date(dob[0], dob[1], dob[2])
+                        self.age = calculate_age(dob)
+
+                    with conn:
+                        c.execute(
+                            """
+                            UPDATE patient_record
+                            SET age = %(age)s, contact_number_1 = %(phone_1)s,
+                                contact_number_2 = %(phone_2)s, weight = %(weight)s,
+                                height = %(height)s, address = %(address)s, city = %(city)s,
+                                state = %(state)s, pin_code = %(pin)s, next_of_kin_name = %(kin_name)s,
+                                next_of_kin_relation_to_patient = %(kin_relation)s,
+                                next_of_kin_contact_number = %(kin_phone)s, email_id = %(email_id)s
+                            WHERE id = %(id)s;
+                            """,
+                            {
+                                'id': id, 'age': self.age,
+                                'phone_1': self.contact_number_1,
+                                'phone_2': self.contact_number_2,
+                                'weight': self.weight, 'height': self.height,
+                                'address': self.address, 'city': self.city,
+                                'state': self.state, 'pin': self.pin_code,
+                                'kin_name': self.next_of_kin_name,
+                                'kin_relation': self.next_of_kin_relation_to_patient,
+                                'kin_phone': self.next_of_kin_contact_number,
+                                'email_id': self.email_id
+                            }
+                        )
+                    st.success('Patient details updated successfully.')
+            except Exception as e:
+                st.error(f'Error updating patient details: {e}')
+            finally:
+                c.close()
                 conn.close()
 
     def delete_patient(self):
-        id = st.text_input('Enter Patient ID of the patient to be deleted')
+        id = utils.sanitize_text_input(st.text_input('Enter Patient ID of the patient to be deleted'))
         if id == '':
             st.empty()
         elif not verify_patient_id(id):
             st.error('Invalid Patient ID')
         else:
             st.success('Verified')
-            conn, c = db.connection()
+            try:
+                conn, c = db.connection()
 
-            with conn:
-                c.execute(
-                    """
-                    SELECT *
-                    FROM patient_record
-                    WHERE id = %(id)s;
-                    """,
-                    { 'id': id }
-                )
-                st.write('Here are the details of the patient to be deleted:')
-                show_patient_details(c.fetchall())
+                with conn:
+                    c.execute(
+                        """
+                        SELECT *
+                        FROM patient_record
+                        WHERE id = %(id)s;
+                        """,
+                        { 'id': id }
+                    )
+                    st.write('Here are the details of the patient to be deleted:')
+                    show_patient_details(c.fetchall())
 
                 confirm = st.checkbox('Check this box to confirm deletion')
                 if confirm:
@@ -264,17 +309,23 @@ class Patient:
                             { 'id': id }
                         )
                         st.success('Patient details deleted successfully.')
-            conn.close()
+            except Exception as e:
+                st.error(f'Error deleting patient details: {e}')
+            finally:
+                c.close()
+                conn.close()
 
     def show_all_patients(self):
         conn, c = db.connection()
-        with conn:
+        try:
             c.execute("SELECT * FROM patient_record;")
             show_patient_details(c.fetchall())
-        conn.close()
+        finally:
+            c.close()
+            conn.close()
 
     def search_patient(self):
-        id = st.text_input('Enter Patient ID of the patient to be searched')
+        id = utils.sanitize_text_input(st.text_input('Enter Patient ID of the patient to be searched'))
         if id == '':
             st.empty()
         elif not verify_patient_id(id):
@@ -282,7 +333,7 @@ class Patient:
         else:
             st.success('Verified')
             conn, c = db.connection()
-            with conn:
+            try:
                 c.execute(
                     """
                     SELECT *
@@ -293,4 +344,6 @@ class Patient:
                 )
                 st.write('Here are the details of the patient you searched for:')
                 show_patient_details(c.fetchall())
-            conn.close()
+            finally:
+                c.close()
+                conn.close()

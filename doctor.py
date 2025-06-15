@@ -3,6 +3,7 @@ from datetime import datetime, date
 import database as db
 import pandas as pd
 import department
+import utils
 
 def verify_doctor_id(doctor_id):
     verify = False
@@ -82,18 +83,18 @@ class Doctor:
 
     def add_doctor(self):
         st.write('Enter doctor details:')
-        self.name = st.text_input('Full name')
+        self.name = utils.sanitize_text_input(st.text_input('Full name'))
         gender = st.radio('Gender', ['Female', 'Male', 'Other'])
-        self.gender = st.text_input('Please mention') if gender == 'Other' else gender
+        self.gender = utils.sanitize_text_input(st.text_input('Please mention')) if gender == 'Other' else gender
 
         dob = st.date_input('Date of birth (YYYY/MM/DD)')
         st.info('If the required date is not in the calendar, please type it in the box above.')
         self.date_of_birth = dob.strftime('%d-%m-%Y')
         self.age = calculate_age(dob)
 
-        self.blood_group = st.text_input('Blood group')
+        self.blood_group = utils.sanitize_text_input(st.text_input('Blood group'))
 
-        department_id = st.text_input('Department ID')
+        department_id = utils.sanitize_text_input(st.text_input('Department ID'))
         if department_id:
             if department.verify_department_id(department_id):
                 st.success('Verified')
@@ -102,19 +103,34 @@ class Doctor:
             else:
                 st.error('Invalid Department ID')
 
-        self.contact_number_1 = st.text_input('Contact number')
+        self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
         contact_number_2 = st.text_input('Alternate contact number (optional)')
-        self.contact_number_2 = contact_number_2 if contact_number_2 else None
-        self.aadhar_or_voter_id = st.text_input('Aadhar ID / Voter ID')
-        self.email_id = st.text_input('Email ID')
-        self.qualification = st.text_input('Qualification')
-        self.specialisation = st.text_input('Specialisation')
+        self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('Aadhar ID / Voter ID'))
+        self.email_id = utils.sanitize_text_input(st.text_input('Email ID'))
+        self.qualification = utils.sanitize_text_input(st.text_input('Qualification'))
+        self.specialisation = utils.sanitize_text_input(st.text_input('Specialisation'))
         self.years_of_experience = st.number_input('Years of experience', value=0, min_value=0, max_value=100)
-        self.address = st.text_area('Address')
-        self.city = st.text_input('City')
-        self.state = st.text_input('State')
-        self.pin_code = st.text_input('PIN code')
+        self.address = utils.sanitize_text_input(st.text_area('Address'))
+        self.city = utils.sanitize_text_input(st.text_input('City'))
+        self.state = utils.sanitize_text_input(st.text_input('State'))
+        self.pin_code = utils.sanitize_text_input(st.text_input('PIN code'))
         self.id = generate_doctor_id()
+
+        # Validate email and phone numbers
+        valid_email = utils.validate_email(self.email_id)
+        valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+        valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+        if not valid_email:
+            st.error('Invalid email format.')
+            return
+        if not valid_phone_1:
+            st.error('Invalid contact number format.')
+            return
+        if self.contact_number_2 and not valid_phone_2:
+            st.error('Invalid alternate contact number format.')
+            return
 
         if st.button('Save'):
             conn, c = db.connection()
@@ -149,7 +165,7 @@ class Doctor:
                 conn.close()
 
     def update_doctor(self):
-        id = st.text_input('Enter Doctor ID of the doctor to be updated')
+        id = utils.sanitize_text_input(st.text_input('Enter Doctor ID of the doctor to be updated'))
         if id and verify_doctor_id(id):
             st.success('Verified')
             conn, c = db.connection()
@@ -159,7 +175,7 @@ class Doctor:
                 show_doctor_details(c.fetchall())
 
                 st.write('Enter new details of the doctor:')
-                department_id = st.text_input('Department ID')
+                department_id = utils.sanitize_text_input(st.text_input('Department ID'))
                 if department_id:
                     if department.verify_department_id(department_id):
                         st.success('Verified')
@@ -168,17 +184,32 @@ class Doctor:
                     else:
                         st.error('Invalid Department ID')
 
-                self.contact_number_1 = st.text_input('Contact number')
+                self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
                 contact_number_2 = st.text_input('Alternate contact number (optional)')
-                self.contact_number_2 = contact_number_2 if contact_number_2 else None
-                self.email_id = st.text_input('Email ID')
-                self.qualification = st.text_input('Qualification')
-                self.specialisation = st.text_input('Specialisation')
+                self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
+                self.email_id = utils.sanitize_text_input(st.text_input('Email ID'))
+                self.qualification = utils.sanitize_text_input(st.text_input('Qualification'))
+                self.specialisation = utils.sanitize_text_input(st.text_input('Specialisation'))
                 self.years_of_experience = st.number_input('Years of experience', value=0, min_value=0, max_value=100)
-                self.address = st.text_area('Address')
-                self.city = st.text_input('City')
-                self.state = st.text_input('State')
-                self.pin_code = st.text_input('PIN code')
+                self.address = utils.sanitize_text_input(st.text_area('Address'))
+                self.city = utils.sanitize_text_input(st.text_input('City'))
+                self.state = utils.sanitize_text_input(st.text_input('State'))
+                self.pin_code = utils.sanitize_text_input(st.text_input('PIN code'))
+
+                # Validate email and phone numbers
+                valid_email = utils.validate_email(self.email_id)
+                valid_phone_1 = utils.validate_phone_number(self.contact_number_1)
+                valid_phone_2 = utils.validate_phone_number(self.contact_number_2)
+
+                if not valid_email:
+                    st.error('Invalid email format.')
+                    return
+                if not valid_phone_1:
+                    st.error('Invalid contact number format.')
+                    return
+                if self.contact_number_2 and not valid_phone_2:
+                    st.error('Invalid alternate contact number format.')
+                    return
 
                 if st.button('Update'):
                     c.execute("SELECT date_of_birth FROM doctor_record WHERE id = %s;", (id,))
@@ -214,7 +245,7 @@ class Doctor:
                 conn.close()
 
     def delete_doctor(self):
-        id = st.text_input('Enter Doctor ID of the doctor to be deleted')
+        id = utils.sanitize_text_input(st.text_input('Enter Doctor ID of the doctor to be deleted'))
         if id and verify_doctor_id(id):
             st.success('Verified')
             conn, c = db.connection()
@@ -244,7 +275,7 @@ class Doctor:
             conn.close()
 
     def search_doctor(self):
-        id = st.text_input('Enter Doctor ID of the doctor to be searched')
+        id = utils.sanitize_text_input(st.text_input('Enter Doctor ID of the doctor to be searched'))
         if id and verify_doctor_id(id):
             st.success('Verified')
             conn, c = db.connection()

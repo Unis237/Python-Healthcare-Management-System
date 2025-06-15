@@ -18,6 +18,21 @@ def db_init():
     with conn:
         c.execute(
             """
+            CREATE TABLE IF NOT EXISTS department_record (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT NOT NULL,
+                contact_number_1 TEXT NOT NULL,
+                contact_number_2 TEXT,
+                address TEXT NOT NULL,
+                email_id TEXT NOT NULL UNIQUE
+            );
+            """
+        )
+
+    with conn:
+        c.execute(
+            """
             CREATE TABLE IF NOT EXISTS patient_record (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -72,20 +87,7 @@ def db_init():
             );
             """
         )
-    with conn:
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS department_record (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                description TEXT NOT NULL,
-                contact_number_1 TEXT NOT NULL,
-                contact_number_2 TEXT,
-                address TEXT NOT NULL,
-                email_id TEXT NOT NULL UNIQUE
-            );
-            """
-        )
+   
     with conn:
         c.execute(
             """
