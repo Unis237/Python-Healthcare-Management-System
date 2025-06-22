@@ -29,7 +29,6 @@ def db_init():
             );
             """
         )
-
     with conn:
         c.execute(
             """
@@ -87,7 +86,42 @@ def db_init():
             );
             """
         )
-   
+    with conn:
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('doctor', 'admin'))
+            );
+            """
+        )
+    with conn:
+        c.execute(
+            """
+            CREATE OR REPLACE FUNCTION validate_user(p_username TEXT, p_password TEXT)
+            RETURNS BOOLEAN AS $$
+            DECLARE
+                stored_hash TEXT;
+                input_hash TEXT;
+            BEGIN
+                SELECT password_hash INTO stored_hash FROM users WHERE username = p_username;
+                IF stored_hash IS NULL THEN
+                    RETURN FALSE;
+                END IF;
+                -- Hash the input password using the same method as when storing
+                SELECT crypt(p_password, stored_hash) INTO input_hash;
+                IF input_hash = stored_hash THEN
+                    RETURN TRUE;
+                ELSE
+                    RETURN FALSE;
+                END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+            """
+        )
+    
     with conn:
         c.execute(
             """

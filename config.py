@@ -5,5 +5,5 @@ db_host = 'localhost'                           # e.g. 'localhost'
 db_port = 5432                                  # default PostgreSQL port
 db_user = 'postgres'                   # e.g. 'postgres'
 password = '1234'                               # e.g. password = '1234'
-db_database = 'health'          # e.g. 'healthcare_db'
+db_database = 'healthcare_db'          # e.g. 'healthcare_db'
 edit_mode_password = 'allow_edit'
