@@ -27,6 +27,23 @@ def validate_user(username, password):
 
 # Login form UI
 def login():
+    # Inject background image CSS
+    st.markdown(
+        """
+        <style>
+        body {
+            background-image: url('login.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.header("Healthcare Management System")
     st.title("Login")
 
     username = st.text_input("Username", max_chars=50)
@@ -53,7 +70,7 @@ def login():
                 conn.close()
 
             st.success("Login successful!")
-            st.rerun()  # ✅ Use this instead of st.experimental_rerun()
+            st.rerun()  #  Use this instead of st.experimental_rerun()
         else:
             st.error("Invalid username or password.")
 

@@ -36,7 +36,7 @@ def calculate_age(dob):
 def show_patient_details(list_of_patients):
     patient_titles = ['Patient ID', 'Name', 'Age', 'Gender', 'Date of birth (DD-MM-YYYY)',
                      'Blood group', 'Contact number', 'Alternate contact number',
-                     'Aadhar ID / Voter ID', 'Weight (kg)', 'Height (cm)', 'Address',
+                     'National ID / Voter ID', 'Weight (kg)', 'Height (cm)', 'Address',
                      'City', 'State', 'PIN code', "Next of kin's name",
                      "Next of kin's relation to patient",
                      "Next of kin's contact number", 'Email ID',
@@ -92,7 +92,7 @@ class Patient:
         self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
         contact_number_2 = st.text_input('Alternate contact number (optional)')
         self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
-        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('Aadhar ID / Voter ID'))
+        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('National ID / Voter ID'))
         self.weight = st.number_input('Weight (in kg)', value=0, min_value=0, max_value=400)
         self.height = st.number_input('Height (in cm)', value=0, min_value=0, max_value=275)
         self.address = utils.sanitize_text_input(st.text_area('Address'))

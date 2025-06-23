@@ -23,7 +23,7 @@ def show_doctor_details(list_of_doctors):
     doctor_titles = [
         'Doctor ID', 'Name', 'Age', 'Gender', 'Date of birth (DD-MM-YYYY)',
         'Blood group', 'Department ID', 'Department name',
-        'Contact number', 'Alternate contact number', 'Aadhar ID / Voter ID',
+        'Contact number', 'Alternate contact number', 'National ID / Voter ID',
         'Email ID', 'Qualification', 'Specialisation',
         'Years of experience', 'Address', 'City', 'State', 'PIN code'
     ]
@@ -106,7 +106,7 @@ class Doctor:
         self.contact_number_1 = utils.sanitize_text_input(st.text_input('Contact number'))
         contact_number_2 = st.text_input('Alternate contact number (optional)')
         self.contact_number_2 = utils.sanitize_text_input(contact_number_2) if contact_number_2 else None
-        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('Aadhar ID / Voter ID'))
+        self.aadhar_or_voter_id = utils.sanitize_text_input(st.text_input('National ID / Voter ID'))
         self.email_id = utils.sanitize_text_input(st.text_input('Email ID'))
         self.qualification = utils.sanitize_text_input(st.text_input('Qualification'))
         self.specialisation = utils.sanitize_text_input(st.text_input('Specialisation'))
