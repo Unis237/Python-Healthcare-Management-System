@@ -160,8 +160,6 @@ def home():
     db.db_init()  # Initialize DB and tables if needed
     role = st.session_state.get('role', None)
 
-    st.title("Healthcare Management System")
-
     if role is None:
         st.error("User role not found, please login again.")
         st.session_state['logged_in'] = False
