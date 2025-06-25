@@ -157,6 +157,7 @@ def departments(role):
 
 # Main home page
 def home():
+    st.title("Healthcare Management System")
     db.db_init()  # Initialize DB and tables if needed
     role = st.session_state.get('role', None)
 
