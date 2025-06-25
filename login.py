@@ -13,7 +13,7 @@ def get_db_connection():
         password=config.password,
         database=config.db_database
     )
-db.db_init()
+# db.db_init()
 # Validate user credentials
 def validate_user(username, password):
     conn = get_db_connection()
