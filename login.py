@@ -1,7 +1,8 @@
 import streamlit as st
 import psycopg2
 import config
-import hims_app  # Make sure hims_app.py is in the same directory
+import database as db
+import hims_app  
 
 # Database connection
 def get_db_connection():
