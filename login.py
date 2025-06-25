@@ -28,6 +28,7 @@ def validate_user(username, password):
 
 # Login form UI
 def login():
+    st.title("Healthcare Management System")
     st.title("Login")
 
     username = st.text_input("Username", max_chars=50)
