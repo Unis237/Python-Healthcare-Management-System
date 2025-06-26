@@ -131,7 +131,7 @@ class Department:
                 st.success('Department details saved successfully.')
                 st.write('The Department ID is: ', self.id)
             except Exception as e:
-                st.error(f'Error saving department details: {e}')
+                st.error('Error saving department details:')
             finally:
                 c.close()
                 conn.close()
@@ -204,7 +204,7 @@ class Department:
                     )
                     st.success('Department details updated successfully.')
             except Exception as e:
-                st.error(f'Error updating department details: {e}')
+                st.error('Error updating department details:')
             finally:
                 c.close()
                 conn.close()
