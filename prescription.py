@@ -121,7 +121,7 @@ class Prescription:
                 conn.commit()
                 st.success(f'Prescription saved. ID: {self.id}')
             except Exception as e:
-                st.error(f'Error saving prescription details: {e}')
+                st.error('Error saving prescription details:')
             finally:
                 conn.close()
 
@@ -160,7 +160,7 @@ class Prescription:
                 conn.commit()
                 st.success('Prescription updated successfully.')
         except Exception as e:
-            st.error(f'Error updating prescription details: {e}')
+            st.error('Error updating prescription details:')
         finally:
             conn.close()
 
@@ -184,7 +184,7 @@ class Prescription:
                 conn.commit()
                 st.success('Prescription deleted successfully.')
         except Exception as e:
-            st.error(f'Error deleting prescription details: {e}')
+            st.error('Error deleting prescription details:')
         finally:
             conn.close()
 
@@ -204,6 +204,6 @@ class Prescription:
             st.write(f'Prescriptions for {get_name_by_id("patient_record", patient_id)}:')
             show_prescription_details(prescriptions)
         except Exception as e:
-            st.error(f'Error fetching prescription records: {e}')
+            st.error('Error fetching prescription records:')
         finally:
             conn.close()
