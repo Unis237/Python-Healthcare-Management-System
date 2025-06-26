@@ -159,7 +159,7 @@ class Doctor:
                 st.write('Your Doctor ID is: ', self.id)
             except Exception as e:
                 conn.rollback()
-                st.error(f'Error saving doctor details: {e}')
+                st.error(f'Error saving doctor details')
             finally:
                 c.close()
                 conn.close()
@@ -260,7 +260,7 @@ class Doctor:
                     st.success('Doctor details deleted successfully.')
             except Exception as e:
                 conn.rollback()
-                st.error(f'Error deleting doctor details: {e}')
+                st.error(f'Error deleting doctor details:')
             finally:
                 c.close()
                 conn.close()
