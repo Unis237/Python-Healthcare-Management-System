@@ -168,7 +168,7 @@ class Patient:
                 st.success('Patient details saved successfully.')
                 st.write('Your Patient ID is: ', self.id)
             except Exception as e:
-                st.error(f'Error saving patient details: {e}')
+                st.error('Error saving patient details:')
             finally:
                 c.close()
                 conn.close()
@@ -269,7 +269,7 @@ class Patient:
                         )
                     st.success('Patient details updated successfully.')
             except Exception as e:
-                st.error(f'Error updating patient details: {e}')
+                st.error('Error updating patient details:')
             finally:
                 c.close()
                 conn.close()
@@ -310,7 +310,7 @@ class Patient:
                         )
                         st.success('Patient details deleted successfully.')
             except Exception as e:
-                st.error(f'Error deleting patient details: {e}')
+                st.error('Error deleting patient details:')
             finally:
                 c.close()
                 conn.close()
