@@ -245,7 +245,7 @@ class Medical_Test:
                 st.write(f'Medical test record for {get_patient_name(patient_id)}:')
                 show_medical_test_details(c.fetchall())
         except Exception as e:
-            st.error(f'Error fetching medical test records: {e}')
+            st.error('Error fetching medical test records:')
         finally:
             c.close()
             conn.close()
